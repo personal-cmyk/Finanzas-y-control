@@ -1,0 +1,16 @@
+{
+    "name": "control-jarol",
+    "version": "1.0.0",
+    "description": "Aplicación de control de finanzas personales",
+    "main": "index.html",
+    "scripts": {
+        "start": "serve .",
+        "dev": "serve ."
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "serve": "^14.2.4"
+    }
+}

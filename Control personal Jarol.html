@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinFlow Pro 2.0 - Finanzas Inteligentes</title>
+    <title>Control Jarol - Finanzas Inteligentes</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <style>
         :root {
             --primary: #06b6d4;
@@ -821,27 +822,102 @@
             }
         }
 
-        /* MODO OSCURO */
+        /* MODO CLARO */
         body.light-mode {
-            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-            color: var(--neutral-900);
+            background: linear-gradient(135deg, #f0f2f5 0%, #ffffff 100%);
+            color: #1a1a1a;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4b5563;
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --border-color: rgba(0, 0, 0, 0.1);
         }
 
         body.light-mode header,
         body.light-mode .nav-tabs {
-            background: rgba(255, 255, 255, 0.95);
-            border-bottom-color: var(--neutral-200);
+            background: rgba(255, 255, 255, 0.98);
+            border-bottom-color: #e5e7eb;
         }
 
         body.light-mode .stat-card,
         body.light-mode .debt-card,
-        body.light-mode .maintenance-item {
-            background: rgba(255, 255, 255, 0.7);
-            border-color: var(--neutral-200);
+        body.light-mode .maintenance-item,
+        body.light-mode .transaction-item,
+        body.light-mode .quick-button {
+            background: #ffffff;
+            border-color: #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            color: #1a1a1a;
         }
 
-        body.light-mode .stat-label {
-            color: var(--neutral-700);
+        body.light-mode .stat-label,
+        body.light-mode .detail-label,
+        body.light-mode .maintenance-meta,
+        body.light-mode .transaction-details {
+            color: #6b7280;
+        }
+
+        body.light-mode .stat-value,
+        body.light-mode .section-title,
+        body.light-mode .maintenance-name,
+        body.light-mode .transaction-type,
+        body.light-mode .detail-value {
+            color: #111827;
+        }
+
+        body.light-mode .modal-content {
+            background: #ffffff;
+            color: #1a1a1a;
+        }
+
+        body.light-mode .form-label {
+            color: #374151;
+        }
+
+        body.light-mode .form-input,
+        body.light-mode .form-select {
+            background: #f9fafb;
+            border-color: #d1d5db;
+            color: #111827;
+        }
+
+        body.light-mode .form-select option {
+            background-color: #ffffff;
+            color: #111827;
+        }
+
+        body.light-mode .nav-tab {
+            color: #4b5563;
+        }
+
+        body.light-mode .nav-tab:hover {
+            color: var(--primary);
+        }
+
+        body.light-mode .nav-tab.active {
+            background: rgba(6, 182, 212, 0.05);
+            color: var(--primary);
+        }
+
+        body.light-mode .theme-toggle {
+            border-color: #e5e7eb;
+            color: #1a1a1a;
+        }
+
+        body.light-mode .empty-state {
+            color: #6b7280;
+        }
+
+        body.light-mode .progress-bar {
+            background: #e5e7eb;
+        }
+
+        body.light-mode .btn-edit {
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        body.light-mode .btn-delete,
+        body.light-mode .btn-delete-debt {
+            background: rgba(239, 68, 68, 0.1);
         }
     </style>
 </head>
@@ -850,16 +926,21 @@
     <div class="app-container">
         <header>
             <div class="header-content">
-                <div class="header-title">💰 FinFlow Pro 2.0</div>
-                <button class="theme-toggle" id="themeToggle" title="Cambiar tema">🌙</button>
+                <div class="header-title">💰 Control Jarol</div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <button class="theme-toggle" id="themeToggle" title="Cambiar tema">🌙</button>
+                    <button onclick="logout()"
+                        style="padding: 0.5rem 1rem; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; border-radius: 8px; cursor: pointer; font-size: 0.875rem; font-weight: 600; transition: all 0.3s;"
+                        title="Cerrar sesión">🚪 Salir</button>
+                </div>
             </div>
         </header>
 
         <!-- NAVIGATION TABS -->
         <div class="nav-tabs">
-            <button class="nav-tab active" onclick="switchPage('dashboard')">📊 Dashboard</button>
-            <button class="nav-tab" onclick="switchPage('deudas')">💳 Deudas</button>
-            <button class="nav-tab" onclick="switchPage('moto')">🏍️ Mantenimiento Moto</button>
+            <button class="nav-tab active" onclick="switchPage('dashboard', this)">📊 Dashboard</button>
+            <button class="nav-tab" onclick="switchPage('deudas', this)">💳 Deudas</button>
+            <button class="nav-tab" onclick="switchPage('moto', this)">🏍️ Mantenimiento Moto</button>
         </div>
 
         <div class="main-content">
@@ -1219,8 +1300,154 @@
             debts: [],
             debtsPayments: [],
             maintenance: [],
-            theme: localStorage.getItem('finflow_theme') || 'dark'
+            theme: localStorage.getItem('finflow_theme') || 'dark',
+            isLoggedIn: false
         };
+
+        // AUTENTICACIÓN
+        function generateCredentials() {
+            const username = 'user_' + Math.random().toString(36).substr(2, 8).toUpperCase();
+            const password = Math.random().toString(36).substr(2, 12) + Math.random().toString(36).substr(2, 4);
+            return { username, password };
+        }
+
+        function initializeAuth() {
+            let credentials = localStorage.getItem('finflow_credentials');
+
+            if (!credentials) {
+                // Primera vez: generar credenciales
+                const newCredentials = generateCredentials();
+                localStorage.setItem('finflow_credentials', JSON.stringify(newCredentials));
+                showInitialSetup(newCredentials);
+            } else {
+                // Ya existen credenciales: mostrar login
+                showLoginScreen();
+            }
+        }
+
+        function showInitialSetup(credentials) {
+            const setupHtml = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a 0%, #1a1f2e 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+                    <div style="background: rgba(30, 30, 40, 0.99); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 2.5rem; max-width: 500px; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🔐</div>
+                        <h1 style="color: #f3f4f6; margin: 0 0 1rem 0; font-size: 1.75rem;">¡Bienvenido a Control Jarol!</h1>
+                        <p style="color: #d1d5db; margin-bottom: 2rem; line-height: 1.6;">Tu app ha generado credenciales únicas para ti. <strong>Guárdalas en un lugar seguro</strong> - las necesitarás para acceder.</p>
+                        
+                        <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid #06b6d4; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; text-align: left;">
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="color: #d1d5db; font-size: 0.875rem; text-transform: uppercase; display: block; margin-bottom: 0.5rem;">Usuario:</label>
+                                <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 0.75rem; border-radius: 8px; color: #f3f4f6; font-weight: 600; font-family: monospace; word-break: break-all;">${credentials.username}</div>
+                                <button onclick="copyToClipboard('${credentials.username}')" style="margin-top: 0.5rem; background: rgba(6, 182, 212, 0.2); border: 1px solid #06b6d4; color: #06b6d4; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">📋 Copiar</button>
+                            </div>
+                            <div>
+                                <label style="color: #d1d5db; font-size: 0.875rem; text-transform: uppercase; display: block; margin-bottom: 0.5rem;">Contraseña:</label>
+                                <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 0.75rem; border-radius: 8px; color: #f3f4f6; font-weight: 600; font-family: monospace; word-break: break-all;">${credentials.password}</div>
+                                <button onclick="copyToClipboard('${credentials.password}')" style="margin-top: 0.5rem; background: rgba(6, 182, 212, 0.2); border: 1px solid #06b6d4; color: #06b6d4; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">📋 Copiar</button>
+                            </div>
+                        </div>
+                        
+                        <p style="color: #f59e0b; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem;">⚠️ <strong>¡Importante!</strong> Guarda estas credenciales. Son únicas y no se pueden recuperar.</p>
+                        
+                        <button onclick="confirmSetup()" style="width: 100%; background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border: none; padding: 0.875rem 1.5rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">He Guardado mis Credenciales</button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('afterbegin', setupHtml);
+        }
+
+        function showLoginScreen() {
+            const loginHtml = `
+                <div id="loginOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a 0%, #1a1f2e 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+                    <div style="background: rgba(30, 30, 40, 0.99); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 2.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
+                        <div style="font-size: 2.5rem; text-align: center; margin-bottom: 1.5rem;">🔒</div>
+                        <h1 style="color: #f3f4f6; margin: 0 0 0.5rem 0; font-size: 1.5rem; text-align: center;">Inicia Sesión</h1>
+                        <p style="color: #d1d5db; text-align: center; margin-bottom: 2rem;">Accede a tu Control Jarol seguro</p>
+                        
+                        <form id="loginForm" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                            <div>
+                                <label style="display: block; color: #d1d5db; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase;">Usuario</label>
+                                <input type="text" id="loginUsername" name="username" autocomplete="username" placeholder="Tu usuario" style="width: 100%; padding: 0.875rem 1rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: #f3f4f6; font-size: 1rem; font-family: inherit; box-sizing: border-box;" required>
+                            </div>
+                            <div>
+                                <label style="display: block; color: #d1d5db; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase;">Contraseña</label>
+                                <input type="password" id="loginPassword" name="password" autocomplete="current-password" placeholder="Tu contraseña" style="width: 100%; padding: 0.875rem 1rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: #f3f4f6; font-size: 1rem; font-family: inherit; box-sizing: border-box;" required>
+                            </div>
+                            <button type="submit" style="width: 100%; background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border: none; padding: 0.875rem 1.5rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">Entrar</button>
+                        </form>
+                        
+                        <div id="loginError" style="color: #ef4444; text-align: center; margin-top: 1rem; display: none; font-size: 0.9rem;"></div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('afterbegin', loginHtml);
+
+            document.getElementById('loginForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                validateLogin();
+            });
+        }
+
+        function validateLogin() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const credentials = JSON.parse(localStorage.getItem('finflow_credentials'));
+
+            if (username === credentials.username && password === credentials.password) {
+                state.isLoggedIn = true;
+                localStorage.setItem('finflow_loggedIn', 'true');
+                const loginOverlay = document.getElementById('loginOverlay');
+                if (loginOverlay) loginOverlay.remove();
+                loadDataFromStorage();
+                setTheme(state.theme);
+                setTodayDate();
+                renderDashboard();
+                renderDebtsPage();
+                renderMotoPage();
+                setupKeyboardShortcuts();
+                showSuccessMessage('¡Bienvenido!');
+            } else {
+                document.getElementById('loginError').textContent = '❌ Usuario o contraseña incorrectos';
+                document.getElementById('loginError').style.display = 'block';
+                document.getElementById('loginPassword').value = '';
+            }
+        }
+
+        function showSuccessMessage(msg) {
+            const message = document.createElement('div');
+            message.textContent = msg;
+            message.style.cssText = `
+                position: fixed;
+                top: 2rem;
+                right: 2rem;
+                background: #10b981;
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                z-index: 10000;
+                animation: slideInRight 0.3s ease-out;
+            `;
+            document.body.appendChild(message);
+            setTimeout(() => message.remove(), 3000);
+        }
+
+        function confirmSetup() {
+            state.isLoggedIn = true;
+            localStorage.setItem('finflow_loggedIn', 'true');
+            document.querySelector('div[style*="position: fixed"]').remove();
+            loadDataFromStorage();
+            setTheme(state.theme);
+            setTodayDate();
+            renderDashboard();
+            renderDebtsPage();
+            renderMotoPage();
+            setupKeyboardShortcuts();
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showSuccessMessage('✓ Copiado al portapapeles');
+            });
+        }
 
         // LOAD DATA
         function loadDataFromStorage() {
@@ -1243,13 +1470,19 @@
 
         // INIT
         function init() {
-            loadDataFromStorage();
-            setTheme(state.theme);
-            setTodayDate();
-            renderDashboard();
-            renderDebtsPage();
-            renderMotoPage();
-            setupKeyboardShortcuts();
+            const isLoggedIn = localStorage.getItem('finflow_loggedIn');
+            if (isLoggedIn) {
+                state.isLoggedIn = true;
+                loadDataFromStorage();
+                setTheme(state.theme);
+                setTodayDate();
+                renderDashboard();
+                renderDebtsPage();
+                renderMotoPage();
+                setupKeyboardShortcuts();
+            } else {
+                initializeAuth();
+            }
         }
 
         // THEME
@@ -1265,12 +1498,22 @@
         });
 
         // PAGE NAVIGATION
-        function switchPage(pageId) {
+        function switchPage(pageId, element) {
             document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
 
             document.getElementById(pageId).classList.add('active');
-            event.target.classList.add('active');
+            if (element) {
+                element.classList.add('active');
+            } else {
+                // Fallback to find the tab by text if element is not passed
+                const tabs = document.querySelectorAll('.nav-tab');
+                tabs.forEach(tab => {
+                    if (tab.getAttribute('onclick').includes(`'${pageId}'`)) {
+                        tab.classList.add('active');
+                    }
+                });
+            }
 
             if (pageId === 'deudas') populateDebtSelect();
         }
@@ -1355,6 +1598,7 @@
             state.debts.push(debt);
             localStorage.setItem('finflow_debts', JSON.stringify(state.debts));
             closeModal('debt-modal');
+            populateDebtSelect();
             renderDebtsPage();
             renderDashboard();
             document.getElementById('debtForm').reset();
@@ -1415,15 +1659,17 @@
         function renderDashboard() {
             const income = state.transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
             const expenses = state.transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-            const debts = state.debts.reduce((s, d) => s + (d.amount - d.paid), 0);
+            const debtsPending = state.debts.reduce((s, d) => s + (d.amount - d.paid), 0);
+            const totalPaidOnDebts = state.debts.reduce((s, d) => s + (d.paid || 0), 0);
+            const available = income - expenses - totalPaidOnDebts;
 
             document.getElementById('totalIncome').textContent = '$' + income.toLocaleString('es-CO', { maximumFractionDigits: 0 });
             document.getElementById('totalExpenses').textContent = '$' + expenses.toLocaleString('es-CO', { maximumFractionDigits: 0 });
-            document.getElementById('totalDebtsDisplay').textContent = '$' + debts.toLocaleString('es-CO', { maximumFractionDigits: 0 });
-            document.getElementById('availableMoney').textContent = '$' + (income - expenses - debts).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+            document.getElementById('totalDebtsDisplay').textContent = '$' + debtsPending.toLocaleString('es-CO', { maximumFractionDigits: 0 });
+            document.getElementById('availableMoney').textContent = '$' + available.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
             renderTransactionsList();
-            generateInsights(income, expenses, debts);
+            generateInsights(income, expenses, debtsPending);
         }
 
         function renderTransactionsList() {
@@ -1466,11 +1712,13 @@
                 container.innerHTML = state.debts.map(debt => {
                     const pending = debt.amount - debt.paid;
                     const percentage = (debt.paid / debt.amount) * 100;
-                    const nextDueDate = new Date(debt.firstDueDate);
-                    nextDueDate.setDate(nextDueDate.getDate() + debt.frequency);
 
-                    return `
-                        <div class="debt-card">
+                    // Calcular próxima fecha de vencimiento basada en cuotas pagadas
+                    const installmentsPaid = Math.floor(debt.paid / (debt.amount / debt.installments));
+                    const nextDueDate = new Date(debt.firstDueDate + 'T00:00:00');
+                    nextDueDate.setDate(nextDueDate.getDate() + (installmentsPaid * debt.frequency));
+
+                    return `           <div class="debt-card">
                             <div class="debt-header">
                                 <div class="debt-type">${debt.type}</div>
                                 <div class="debt-amount">$${debt.amount.toLocaleString('es-CO', { maximumFractionDigits: 0 })}</div>
@@ -1490,7 +1738,7 @@
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Próximo Vence</div>
-                                    <div class="detail-value">${nextDueDate.toLocaleDateString('es-CO')}</div>
+                                    <div class="detail-value">${pending <= 0 ? '<span style="color: var(--success);">¡Pagada!</span>' : nextDueDate.toLocaleDateString('es-CO')}</div>
                                 </div>
                             </div>
                             <div class="progress-bar">
@@ -1563,7 +1811,9 @@
             }
 
             let html = '';
-            const available = income - expenses - debts;
+            // Usar la misma lógica de "Dinero Disponible" que el dashboard
+            const totalPaidOnDebts = state.debts.reduce((s, d) => s + (d.paid || 0), 0);
+            const available = income - expenses - totalPaidOnDebts;
             const savingsRate = available / income;
 
             if (savingsRate > 0.3) {
@@ -1579,8 +1829,10 @@
             if (confirm('¿Eliminar esta deuda?')) {
                 state.debts = state.debts.filter(d => d.id !== id);
                 localStorage.setItem('finflow_debts', JSON.stringify(state.debts));
+                populateDebtSelect();
                 renderDebtsPage();
                 renderDashboard();
+                showSuccess('Deuda eliminada');
             }
         }
 
@@ -1667,6 +1919,15 @@
                     openModal('income-modal');
                 }
             });
+        }
+
+        // Logout functionality
+        function logout() {
+            if (confirm('¿Cerrar sesión?')) {
+                state.isLoggedIn = false;
+                localStorage.removeItem('finflow_loggedIn');
+                window.location.reload();
+            }
         }
 
         init();
